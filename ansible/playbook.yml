@@ -1,0 +1,106 @@
+---
+- name: Configure WEB Servers
+  hosts: all
+  become: yes
+
+  tasks:
+
+  - name: Install Apache
+    yum: name=httpd state=latest
+
+  - name: Start WebServer and make it enable on boot
+    service: name=httpd state=started enabled=yes
+
+  - name: epel-release
+    yum: name=epel-release state=installed
+
+  - name: Add repository 'remi-repo'
+    command: rpm -Uhv https://rpms.remirepo.net/enterprise/remi-release-7.rpm creates=/etc/yum.repos.d/remi.repo
+    
+  - name: install php71
+    yum:
+      name: "{{ packages }}"
+      enablerepo: remi-php71
+      state: installed
+    vars:
+      packages:
+      - php
+      - php-common
+      - php-intl
+      - php-zip
+      - php-soap
+      - php-xmlrpc
+      - php-opcache
+      - php-mbstring
+      - php-gd
+      - php-curl
+      - php-mysql
+      - php-xml
+      - php-memcache
+
+  - name: Download and extract moodle
+    unarchive:
+      src: https://download.moodle.org/stable36/moodle-latest-36.tgz
+      dest: /var/www/html/
+      remote_src: yes
+
+  - name: Creating moodledata folder
+    file:
+      path: /var/www/moodledata
+      state: directory
+      owner: apache
+      group: apache
+      mode: 0755
+
+  - name: Change user, group and mode moodle folder
+    file:
+      path: /var/www/html/moodle
+      state: directory
+      owner: apache
+      group: apache
+      mode: 0755
+      recurse: yes
+
+  - name: Disable SElinux
+    command: setenforce 0
+
+  - name: Configure Apache
+    template: src=./templates/httpd.j2 dest=/etc/httpd/conf/httpd.conf
+
+  - name: Install moodle on the first WebServer
+    shell: 
+      /usr/bin/php /var/www/html/moodle/admin/cli/install.php
+      --chmod=2770 \
+      --lang=en \
+      --wwwroot=http://192.168.56.20 \
+      --dataroot=/var/www/moodledata \
+      --dbtype=mariadb \
+      --dbhost=192.168.56.30 \
+      --dbname=moodle_db \
+      --dbuser=moodle \
+      --dbpass=user_PA@@w0rd \
+      --prefix=mdl_ \
+      --fullname=Moodle \
+      --shortname=moodle \
+      --summary=Moodle \
+      --adminuser=admin \
+      --adminpass=user_PA##w0rd \
+      --allow-unstable \
+      --non-interactive \
+      --agree-license
+    when: ansible_hostname == 'machine1'
+
+  - name: Install moodle on other WebServers
+    copy: src=./config.php dest=/var/www/html/moodle
+    when: ansible_hostname != 'machine1'
+
+  - name: Change user, group and mode config.php
+    file:
+      path: /var/www/html/moodle/config.php
+      state: file
+      owner: apache
+      group: apache
+      mode: 0755
+
+  - name: Restart WebServer
+    service: name=httpd state=restarted
