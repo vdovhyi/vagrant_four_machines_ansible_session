@@ -10,15 +10,16 @@ Vagrant.configure("2") do |config|
     config.vm.define "db_server" do |db_server|
       db_server.vm.provision :shell, :path => "scenario_db.sh"
       db_server.vm.network "private_network", ip: "192.168.56.30"
-      #config.vm.network "forwarded_port", guest: 3306, host: 3308
     end
+    #WebServers
     (1..N).each do |machine_id|
       config.vm.define "machine#{machine_id}" do |machine|
         machine.vm.hostname = "machine#{machine_id}"
         machine.vm.network "private_network", ip: "192.168.56.#{20+machine_id}"
+        machine.vm.provision :shell, :path => "php.sh"
       end
     end
-    
+    #Ansible,haproxy
     config.vm.define "ansible_master" do |ansible_master|
       ansible_master.vm.hostname = "ansible"
       ansible_master.vm.network "private_network", ip: "192.168.56.20"
@@ -26,9 +27,9 @@ Vagrant.configure("2") do |config|
       	source: "ansible", 
       	destination: "/home/vagrant/"
       config.vm.provision "shell", inline: <<-SHELL
-         mkdir /home/vagrant/ansible/ssh_keys
-         echo "[WEB_SERVERS]">/home/vagrant/ansible/hosts.txt
-         chown -R vagrant:vagrant /home/vagrant/ansible
+        mkdir /home/vagrant/ansible/ssh_keys
+        echo "[WEB_SERVERS]">/home/vagrant/ansible/hosts.txt
+        chown -R vagrant:vagrant /home/vagrant/ansible
       SHELL
       (1..N).each do |machine_id|
       	config.vm.provision "shell", inline: <<-SHELL
@@ -37,8 +38,8 @@ Vagrant.configure("2") do |config|
         fi
         SHELL
       	config.vm.provision "file", 
-      	source: ".vagrant/machines/machine#{machine_id}/virtualbox/private_key", 
-      	destination: "/home/vagrant/ansible/ssh_keys/private_key#{machine_id}"
+      	  source: ".vagrant/machines/machine#{machine_id}/virtualbox/private_key", 
+      	  destination: "/home/vagrant/ansible/ssh_keys/private_key#{machine_id}"
         config.vm.provision "shell", inline: <<-SHELL
           echo "machine#{machine_id}\t ansible_ssh_host=192.168.56.#{20+machine_id} ansible_user=vagrant ansible_ssh_private_key_file=/home/vagrant/ansible/ssh_keys/private_key#{machine_id}">>/home/vagrant/ansible/hosts.txt
           chmod 400 /home/vagrant/ansible/ssh_keys/private_key#{machine_id}
