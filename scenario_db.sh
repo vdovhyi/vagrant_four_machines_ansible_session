@@ -9,15 +9,13 @@ echo -e "-- -------------------------- --\n"
 echo -e "-- Updating packages list\n"
 sudo yum update -y
 
-# Install Packages #############################################################
-echo -e "-- Install Packages\n"
-sudo yum install -y expect wget
-# MariaDB
+# MariaDB ######################################################################
+echo -e "-- Install MariaDB\n"
 sudo yum -y install mariadb-server
 sudo systemctl start mariadb
 sudo systemctl enable mariadb
-# set root password
 
+# set root password
 ROOT_PASS="r00t_PA@@"
 DB_NAME="moodle_db"
 DB_USER="moodle"
@@ -33,10 +31,11 @@ GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '${ROOT_PASS}' WITH GRAN
 GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}@%' IDENTIFIED BY '${DB_PASS}' WITH GRANT OPTION;;\
 FLUSH PRIVILEGES;"
 # restart
+echo -e "-- Restarting MariaDB\n"
 sudo systemctl restart mariadb
 
 # MEMCASHE ####################################################################
-echo -e "-- Install Packages\n"
+echo -e "-- Install Memcached\n"
 sudo yum install -y memcached
 sudo systemctl start memcached
 sudo systemctl enable memcached

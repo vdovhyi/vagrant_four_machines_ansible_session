@@ -11,6 +11,33 @@
   - name: Start WebServer and make it enable on boot
     service: name=httpd state=started enabled=yes
   
+  - name: Add repository 'webtatic-release'
+    yum: 
+      name: https://mirror.webtatic.com/yum/el7/webtatic-release.rpm
+      state: present
+    
+  - name: upgrade all packages
+    yum: name=* state=latest 
+ 
+  - name: install php71
+    yum:
+      name: "{{ packages }}"
+      state: latest
+    vars:
+      packages:
+      - mod_php71w
+      - php71w-common
+      - php71w-xmlrpc
+      - php71w-soap
+      - php71w-gd
+      - php71w-xml
+      - php71w-intl
+      - php71w-mysqlnd
+      - php71w-cli
+      - php71w-mcrypt
+      - php71w-ldap
+      - php71w-pecl-memcached
+
   - name: Download and extract moodle
     unarchive:
       src: https://download.moodle.org/stable36/moodle-latest-36.tgz
